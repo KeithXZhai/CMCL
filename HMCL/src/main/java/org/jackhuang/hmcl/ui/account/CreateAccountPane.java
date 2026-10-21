@@ -58,6 +58,7 @@ import org.jackhuang.hmcl.upgrade.IntegrityChecker;
 import org.jackhuang.hmcl.util.StringUtils;
 import org.jackhuang.hmcl.util.javafx.BindingMapping;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
@@ -72,6 +73,7 @@ import static org.jackhuang.hmcl.setting.SettingsManager.settings;
 import static org.jackhuang.hmcl.ui.FXUtils.*;
 import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
 
+/// Creates accounts using the authentication methods available in this build.
 public class CreateAccountPane extends JFXDialogLayout implements DialogAware {
     private static final Pattern USERNAME_CHECKER_PATTERN = Pattern.compile("^[A-Za-z0-9_]+$");
 
@@ -94,17 +96,21 @@ public class CreateAccountPane extends JFXDialogLayout implements DialogAware {
         this((AccountFactory<?>) null);
     }
 
-    public CreateAccountPane(AccountFactory<?> factory) {
+    /// Opens the requested method, or selects an available default when the factory is null.
+    public CreateAccountPane(@Nullable AccountFactory<?> factory) {
         if (factory == null) {
             if (AccountListPage.RESTRICTED.get()) {
                 showMethodSwitcher = false;
                 factory = Accounts.FACTORY_MICROSOFT;
             } else {
                 showMethodSwitcher = true;
-                String preferred = settings().preferredLoginTypeProperty().get();
+                @Nullable String preferred = settings().preferredLoginTypeProperty().get();
                 try {
                     factory = Accounts.getAccountFactory(preferred);
                 } catch (IllegalArgumentException e) {
+                    factory = Accounts.FACTORY_OFFLINE;
+                }
+                if (factory == Accounts.FACTORY_MICROSOFT && !MicrosoftAccountLoginPane.isAvailable()) {
                     factory = Accounts.FACTORY_OFFLINE;
                 }
             }
@@ -148,10 +154,13 @@ public class CreateAccountPane extends JFXDialogLayout implements DialogAware {
         }
 
         if (showMethodSwitcher) {
-            TabControl.Tab<?>[] tabs = new TabControl.Tab[Accounts.FACTORIES.size()];
-            TabControl.Tab<?> selected = null;
+            @Unmodifiable List<AccountFactory<?>> factories = Accounts.FACTORIES.stream()
+                    .filter(f -> f != Accounts.FACTORY_MICROSOFT || MicrosoftAccountLoginPane.isAvailable())
+                    .toList();
+            TabControl.Tab<?>[] tabs = new TabControl.Tab[factories.size()];
+            @Nullable TabControl.Tab<?> selected = null;
             for (int i = 0; i < tabs.length; i++) {
-                AccountFactory<?> f = Accounts.FACTORIES.get(i);
+                AccountFactory<?> f = factories.get(i);
                 tabs[i] = new TabControl.Tab<>(Accounts.getLoginType(f), Accounts.getLocalizedLoginTypeName(f));
                 tabs[i].setUserData(f);
                 if (factory == f) {

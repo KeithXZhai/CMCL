@@ -49,6 +49,7 @@ import org.jackhuang.hmcl.ui.construct.*;
 import org.jackhuang.hmcl.upgrade.IntegrityChecker;
 import org.jackhuang.hmcl.util.QrCodeUtils;
 import org.jackhuang.hmcl.util.StringUtils;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 import java.util.concurrent.CancellationException;
@@ -58,18 +59,24 @@ import static org.jackhuang.hmcl.setting.SettingsManager.settings;
 import static org.jackhuang.hmcl.ui.FXUtils.onEscPressed;
 import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
 
+/// Presents Microsoft sign-in and prevents authentication when this build lacks an OAuth client ID.
 public class MicrosoftAccountLoginPane extends JFXDialogLayout implements DialogAware {
-    private final Account accountToRelogin;
-    private final Consumer<AuthInfo> loginCallback;
-    private final Runnable cancelCallback;
+    /// Existing account to replace after successful reauthentication, if any.
+    private final @Nullable Account accountToRelogin;
+    /// Optional callback receiving the authenticated account information.
+    private final @Nullable Consumer<AuthInfo> loginCallback;
+    /// Optional callback invoked when the dialog is cancelled.
+    private final @Nullable Runnable cancelCallback;
 
     @SuppressWarnings("FieldCanBeLocal")
     private final WeakListenerHolder holder = new WeakListenerHolder();
 
     private final ObjectProperty<Step> step = new SimpleObjectProperty<>();
 
-    private TaskExecutor browserTaskExecutor;
-    private TaskExecutor deviceTaskExecutor;
+    /// Current browser authentication task, if one has been started.
+    private @Nullable TaskExecutor browserTaskExecutor;
+    /// Current device authentication task, if one has been started.
+    private @Nullable TaskExecutor deviceTaskExecutor;
 
     private final JFXButton btnLogin;
     private final SpinnerPane loginButtonSpinner;
@@ -82,7 +89,8 @@ public class MicrosoftAccountLoginPane extends JFXDialogLayout implements Dialog
         this(null, null, null, bodyonly);
     }
 
-    public MicrosoftAccountLoginPane(Account account, Consumer<AuthInfo> callback, Runnable onCancel, boolean bodyonly) {
+    /// Creates a sign-in dialog, optionally replacing an account and notifying its caller.
+    public MicrosoftAccountLoginPane(@Nullable Account account, @Nullable Consumer<AuthInfo> callback, @Nullable Runnable onCancel, boolean bodyonly) {
         this.accountToRelogin = account;
         this.loginCallback = callback;
         this.cancelCallback = onCancel;
@@ -128,33 +136,41 @@ public class MicrosoftAccountLoginPane extends JFXDialogLayout implements Dialog
                 step.set(new Step.DeviceLoginCompleted());
         }));
 
-        this.step.set(Accounts.OAUTH_CALLBACK.getClientId().isEmpty()
-                ? new Step.Init()
-                : new Step.StartAuthorizationCodeLogin());
+        this.step.set(isAvailable() ? new Step.StartAuthorizationCodeLogin() : new Step.Init());
         FXUtils.onChangeAndOperate(step, this::onStep);
     }
 
+    /// Returns whether the effective Microsoft OAuth client ID is present and nonblank.
+    static boolean isAvailable() {
+        return !StringUtils.isBlank(Accounts.OAUTH_CALLBACK.getClientId());
+    }
+
+    /// Renders the current sign-in step, stopping before authentication if OAuth is unavailable.
     private void onStep(Step currentStep) {
         VBox rootContainer = new VBox(10);
         setBody(rootContainer);
         rootContainer.setAlignment(Pos.TOP_CENTER);
 
-        StackPane warningPane = new StackPane();
+        VBox warningPane = new VBox(10);
+        rootContainer.getChildren().add(warningPane);
 
         if (!IntegrityChecker.isOfficial()) {
             var unofficialHintPane = new HintPane(MessageDialogPane.MessageType.WARNING);
             unofficialHintPane.setSegment(i18n("unofficial.hint"));
             warningPane.getChildren().add(unofficialHintPane);
-        } else if (Accounts.OAUTH_CALLBACK.getClientId().isEmpty()) {
-            HintPane snapshotHint = new HintPane(MessageDialogPane.MessageType.WARNING);
-            snapshotHint.setSegment(i18n("account.methods.microsoft.snapshot"));
-            warningPane.getChildren().add(snapshotHint);
+        }
+
+        if (!isAvailable()) {
+            HintPane unavailableHint = new HintPane(MessageDialogPane.MessageType.WARNING);
+            unavailableHint.setText(i18n("account.methods.microsoft.unavailable"));
+            warningPane.getChildren().add(unavailableHint);
             btnLogin.setDisable(true);
             loginButtonSpinner.setLoading(false);
+            cancelAllTasks();
             return;
         }
 
-        rootContainer.getChildren().add(warningPane);
+        btnLogin.setDisable(false);
 
         if (currentStep instanceof Step.Init) {
             btnLogin.setOnAction(e -> this.step.set(new Step.StartAuthorizationCodeLogin()));

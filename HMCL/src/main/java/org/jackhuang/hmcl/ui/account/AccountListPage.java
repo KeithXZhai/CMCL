@@ -28,6 +28,7 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Skin;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import org.jackhuang.hmcl.auth.Account;
 import org.jackhuang.hmcl.auth.authlibinjector.AuthlibInjectorServer;
@@ -50,6 +51,7 @@ import static org.jackhuang.hmcl.setting.SettingsManager.userSettings;
 import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
 import static org.jackhuang.hmcl.util.javafx.ExtendedProperties.createSelectedItemPropertyFor;
 
+/// Displays saved accounts and the available account creation methods.
 public final class AccountListPage extends DecoratorAnimatedPage implements DecoratorPage {
     static final BooleanProperty RESTRICTED = new SimpleBooleanProperty(true);
 
@@ -105,11 +107,13 @@ public final class AccountListPage extends DecoratorAnimatedPage implements Deco
         return new AccountListPageSkin(this);
     }
 
+    /// Builds the account navigation entries and the list of saved accounts.
     private static class AccountListPageSkin extends DecoratorAnimatedPageSkin<AccountListPage> {
 
         private final ObservableList<AdvancedListItem> authServerItems;
         private ChangeListener<Boolean> holder;
 
+        /// Creates the account list and disables Microsoft sign-in when OAuth is unconfigured.
         public AccountListPageSkin(AccountListPage skinnable) {
             super(skinnable);
 
@@ -130,6 +134,13 @@ public final class AccountListPage extends DecoratorAnimatedPage implements Deco
                             Controllers.dialog(new MicrosoftAccountLoginPane());
                         }
                     });
+
+                    StackPane microsoftEntry = new StackPane(microsoftItem);
+                    if (!MicrosoftAccountLoginPane.isAvailable()) {
+                        microsoftItem.setDisable(true);
+                        // Keep the tooltip on an enabled parent so the disabled entry can explain why.
+                        FXUtils.installFastTooltip(microsoftEntry, i18n("account.methods.microsoft.unavailable"));
+                    }
 
                     AdvancedListItem offlineItem = new AdvancedListItem();
                     offlineItem.getStyleClass().add("navigation-drawer-item");
@@ -183,18 +194,18 @@ public final class AccountListPage extends DecoratorAnimatedPage implements Deco
                         offlineItem.setDisable(true);
                         boxAuthServers.setDisable(true);
 
-                        boxMethods.getChildren().setAll(title, microsoftItem, wrapper);
+                        boxMethods.getChildren().setAll(title, microsoftEntry, wrapper);
 
                         holder = FXUtils.onWeakChange(RESTRICTED, value -> {
                             if (!value) {
                                 holder = null;
                                 offlineItem.setDisable(false);
                                 boxAuthServers.setDisable(false);
-                                boxMethods.getChildren().setAll(title, microsoftItem, offlineItem, boxAuthServers);
+                                boxMethods.getChildren().setAll(title, microsoftEntry, offlineItem, boxAuthServers);
                             }
                         });
                     } else {
-                        boxMethods.getChildren().setAll(title, microsoftItem, offlineItem, boxAuthServers);
+                        boxMethods.getChildren().setAll(title, microsoftEntry, offlineItem, boxAuthServers);
                     }
                 }
 
