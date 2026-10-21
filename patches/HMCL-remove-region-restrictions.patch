@@ -1,0 +1,73 @@
+diff --git a/HMCL/src/main/java/org/jackhuang/hmcl/ui/account/AccountListPage.java b/HMCL/src/main/java/org/jackhuang/hmcl/ui/account/AccountListPage.java
+--- a/HMCL/src/main/java/org/jackhuang/hmcl/ui/account/AccountListPage.java
++++ b/HMCL/src/main/java/org/jackhuang/hmcl/ui/account/AccountListPage.java
+@@ -54,8 +54,8 @@ public final class AccountListPage extends DecoratorAnimatedPage implements DecoratorPage {
+     static final BooleanProperty RESTRICTED = new SimpleBooleanProperty(true);
+ 
+     static {
+-        String property = System.getProperty("hmcl.offline.auth.restricted", "auto");
++        String property = System.getProperty("hmcl.offline.auth.restricted", "false");
+ 
+         if ("false".equals(property)
+                 || "auto".equals(property) && RegionUtils.isIsChinaMainlandMachine()
+                 || SettingsManager.userSettings().enableOfflineAccountProperty().get())
+diff --git a/HMCL/src/main/java/org/jackhuang/hmcl/ui/download/VersionsPage.java b/HMCL/src/main/java/org/jackhuang/hmcl/ui/download/VersionsPage.java
+--- a/HMCL/src/main/java/org/jackhuang/hmcl/ui/download/VersionsPage.java
++++ b/HMCL/src/main/java/org/jackhuang/hmcl/ui/download/VersionsPage.java
+@@ -57,7 +57,6 @@
+ import org.jackhuang.hmcl.ui.wizard.Refreshable;
+ import org.jackhuang.hmcl.ui.wizard.WizardPage;
+ import org.jackhuang.hmcl.util.NativePatcher;
+-import org.jackhuang.hmcl.util.RegionUtils;
+ import org.jackhuang.hmcl.util.StringUtils;
+ import org.jackhuang.hmcl.util.i18n.I18n;
+ import org.jackhuang.hmcl.util.platform.OperatingSystem;
+@@ -453,21 +452,6 @@
+                 root.setCenter(transitionPane);
+             }
+ 
+-            if (RegionUtils.isIsChinaMainlandNetwork()) {
+-                BorderPane wrapper = new BorderPane();
+-
+-                HintPane hint = new HintPane(MessageDialogPane.MessageType.WARNING);
+-                hint.setSegment(i18n("download.china"));
+-
+-                BorderPane.setMargin(hint, new Insets(10, 10, 0, 10));
+-
+-                wrapper.setTop(hint);
+-
+-                root.setDisable(true);
+-                wrapper.setCenter(root);
+ 
+-                this.getChildren().setAll(wrapper);
+-            } else {
+-                this.getChildren().setAll(root);
+-            }
++            this.getChildren().setAll(root);
+         }
+diff --git a/HMCL/src/main/java/org/jackhuang/hmcl/ui/instances/DownloadListPage.java b/HMCL/src/main/java/org/jackhuang/hmcl/ui/instances/DownloadListPage.java
+--- a/HMCL/src/main/java/org/jackhuang/hmcl/ui/instances/DownloadListPage.java
++++ b/HMCL/src/main/java/org/jackhuang/hmcl/ui/instances/DownloadListPage.java
+@@ -628,21 +628,6 @@
+                 });
+             }
+ 
+-            if (RegionUtils.isIsChinaMainlandNetwork()) {
+-                BorderPane wrapper = new BorderPane();
+-
+-                HintPane hint = new HintPane(MessageDialogPane.MessageType.WARNING);
+-                hint.setSegment(i18n("download.china"));
+-
+-                BorderPane.setMargin(hint, new Insets(10, 10, 0, 10));
+-
+-                wrapper.setTop(hint);
+-
+-                pane.setDisable(true);
+-                wrapper.setCenter(pane);
+ 
+-                this.getChildren().setAll(wrapper);
+-            } else {
+-                this.getChildren().setAll(pane);
+-            }
++            this.getChildren().setAll(pane);
+         }
