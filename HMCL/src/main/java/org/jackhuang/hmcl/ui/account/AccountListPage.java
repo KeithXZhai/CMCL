@@ -54,7 +54,7 @@ public final class AccountListPage extends DecoratorAnimatedPage implements Deco
     static final BooleanProperty RESTRICTED = new SimpleBooleanProperty(true);
 
     static {
-        String property = System.getProperty("hmcl.offline.auth.restricted", "auto");
+        String property = System.getProperty("hmcl.offline.auth.restricted", "false");
 
         if ("false".equals(property)
                 || "auto".equals(property) && RegionUtils.isIsChinaMainlandMachine()
